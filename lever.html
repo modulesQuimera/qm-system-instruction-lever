@@ -1,0 +1,457 @@
+<script type="text/javascript">
+	RED.nodes.registerType('lever',{
+		category: 'System instruction',
+		color: '#ff4800',
+		defaults: {
+            name:{ value: "" },
+			level_detect: { value: "false" },
+			type_detect: { value: false },
+            start_skip: { value: false },
+            stop_return: { value: false },
+
+            callbacks:{ value: [] },
+            slots:{ value: [] },
+            leds:{ value: [] }
+           
+		},
+		inputs:1,
+		outputs:1,
+		icon: "parser-json.svg",
+		label: function() {
+			return this.name? "Lever - " + this.name: "Lever";
+		},
+		oneditprepare: function() {
+            var node = this;
+
+            //DAQUI PRA BAIXO TUDO IGUAL
+            function update(){
+                $( "#myCallbacks input" ).keyup(function() { //ATUALIZA VALORES DO INPUT COM EVENTO DE KEYUP
+                    var value = $( this ).val();
+                    var index = $( this ).data("index");
+                    var callback = { name: $(this).data("type"), message: value };     
+                    node.callbacks[index] = callback;
+                }).keyup();
+
+                $( "#mySlots select" ).on("change", function() { //ATUALIZA SELECTS COM EVENTO ONCHANGE
+                    var index = $( this ).data("index");
+                    if($(this).data("type") == "position") node.slots[index].position = parseInt($( this ).val());
+                    if($(this).data("type") == "action") node.slots[index].action = $( this ).val();
+                    if($(this).data("type") == "type") node.slots[index].type = $( this ).val();
+                });
+
+                $( "#myLeds select" ).on("change", function() {
+                    var index = $( this ).data("index");
+                    if($(this).data("type") == "action") node.leds[index].action = $( this ).val();
+                    if($(this).data("type") == "led") node.leds[index].led = $( this ).val();
+                });
+
+                $( "#myLeds input" ).keyup(function() {
+                    var index = $( this ).data("index");
+                    if($(this).data("type") == "time") node.leds[index].time_toggled = parseInt($( this ).val()); 
+                    if($(this).data("type") == "freq") node.leds[index].freq_toggled = parseInt($( this ).val());              
+                }).keyup();
+
+                $( "#myLeds input" ).on("click", function() {
+                    var index = $( this ).data("index");
+                    if($(this).data("type") == "value") { $( this ).is(':checked')? node.leds[index].value = true : node.leds[index].value = false; }
+                    if($(this).data("type") == "toggled") {
+                        if($( this ).is(':checked')){
+                            node.leds[index].toggled = true;
+                            $(('#time'+index)).prop('required',true);
+                            $(('#freq'+index)).prop('required',true);
+                        }else{
+                            node.leds[index].toggled = false;
+                            $(('#time'+index)).prop('required',false);
+                            $(('#freq'+index)).prop('required',false);
+                        }  
+                    }                     
+                });
+            }
+
+            $("#node-config-input-callbacks").on("change", function(e) { //CRIA NOVO CALLBACK
+                console.log("entrou no ONchange")
+                var compare = $(this).val();       
+                
+                function new_callback(type){
+                    var callback = document.createElement("div");
+                    var myCallbacks = document.getElementById("myCallbacks");
+                    var id = $( "#myCallbacks input" ).length;
+                    callback.className = 'innerCombo';
+                    callback.innerHTML = 
+                        "<label for='node-input-message'><i class='fa fa-envelope'></i> "+type+"</label>"+
+                        "<input type='text' data-type='"+type+"' placeholder='"+type+"' data-index='"+id+"' maxlength = '40' style='width:100%;'>";
+                    myCallbacks.appendChild(callback);                   
+                    node.callbacks.push({name: type, message: ""});
+
+                }
+
+                if (compare === "1") { new_callback("on_init"); }
+                if (compare === "2") { new_callback("on_error"); }
+                if (compare === "3") { new_callback("on_finally_error"); }
+                if (compare === "4") { new_callback("on_finally"); }
+                if (compare === "5") { new_callback("on_restart"); }
+                
+                $(this).val("0");
+                update();
+            });
+
+            $("#removeCallback").on("click", function(e){ //REMOVE CALLBACK
+                node.callbacks.pop();
+                $('#myCallbacks div:last-child').remove();
+            });
+
+            (function (){ // ATUALIZA LISTA DE CALLBACKS
+                if(node.callbacks.length > 0){
+                    for(call in node.callbacks){
+                        var type = node.callbacks[call].name;
+                        var message = node.callbacks[call].message;
+                        var callback = document.createElement("div");
+                        var myCallbacks = document.getElementById("myCallbacks");
+                        callback.className = 'innerCombo';
+                        callback.innerHTML = 
+                            "<label><i class='fa fa-envelope'></i> "+type+"</label>"+
+                            "<input type='text' data-type='"+type+"' placeholder='"+type+"' data-index='"+call+"' maxlength = '40' value='"+message+"' style='width:100%;'>";
+                        myCallbacks.appendChild(callback);                   
+                    }
+                    update();
+                }
+            })();
+
+            $("#addBox").on("click", function(e){ //CRIA NOVO BOX/SLOT
+                
+                var slot = document.createElement("div");
+                var mySlots = document.getElementById("mySlots");
+                var id = ($( "#mySlots select" ).length)/3;
+                slot.className = 'innerCombo triforce';
+                slot.innerHTML = 
+                    "<ul class='columm'>"+
+                        "<label><i class='fa fa-sliders'></i> Position</label>"+
+                        "<select data-index='"+id+"' data-type='position' style='width: 100%'>"+
+                            "<option value='0' selected>1</option>"+
+                            "<option value='1'>2</option>"+
+                            "<option value='2'>3</option>"+
+                            "<option value='3'>4</option>"+ 
+                        "</select>"+
+                    "</ul>"+
+                    "<ul class='columm'>"+
+                        "<label ><i class='fa fa-sliders'></i> Action</label>"+
+                        "<select data-index='"+id+"' data-type='action' style='width: 100%;'>"+
+                            "<option value='on_init' selected>on_init</option>"+
+                            "<option value='on_error'>on_error</option>"+
+                            "<option value='on_finally_error'>on_finally_error</option>"+
+                            "<option value='on_finally'>on_finally</option>"+
+                            "<option value='on_restart'>on_restart</option>"+
+                        "</select>"+
+                    "</ul>"+
+                    "<ul class='columm'>"+
+                        "<label><i class='fa fa-sliders'></i> Type</label>"+
+                        "<select data-index='"+id+"' data-type='type' style='width: 100%;'>"+
+                            "<option value='scan' selected>scan</option>"+
+                            "<option value='scan_error'>scan_error</option>"+
+                            "<option value='ready'>ready</option>"+
+                        "</select>"+
+                    "</ul>"
+                mySlots.appendChild(slot);      
+                node.slots.push({position: 0, action: "on_init", type: "scan"});
+                update();
+
+            });
+
+            $("#removeBox").on("click", function(e){ //REMOVE BOX/SLOT
+                node.slots.pop();
+                $('#mySlots div:last-child').remove();
+            });
+
+            (function (){ //ATUALIZA LISTA DE BOX/SLOTS 
+                if(node.slots.length > 0){
+                    for(slo in node.slots){
+                    
+                        var position = node.slots[slo].position;
+                        var action = node.slots[slo].action;
+                        var type = node.slots[slo].type;
+
+                        var slot = document.createElement("div");
+                        var mySlots = document.getElementById("mySlots");
+                        var id = ($( "#mySlots select" ).length)/3;
+
+                        slot.className = 'innerCombo triforce';
+                        slot.innerHTML = 
+                            "<ul class='columm'>"+
+                                "<label><i class='fa fa-sliders'></i> Position</label>"+
+                                "<select data-index='"+id+"' data-type='position' style='width: 100%'>"+
+                                    "<option value='"+position+"' selected>"+(position+1)+"</option>"+
+                                    "<option value='0'>1</option>"+
+                                    "<option value='1'>2</option>"+
+                                    "<option value='2'>3</option>"+
+                                    "<option value='3'>4</option>"+ 
+                                "</select>"+
+                            "</ul>"+
+                            "<ul class='columm'>"+
+                                "<label><i class='fa fa-sliders'></i> Action</label>"+
+                                "<select data-index='"+id+"' data-type='action' style='width: 100%;'>"+
+                                    "<option value='"+action+"' selected>"+action+"</option>"+
+                                    "<option value='on_init'>on_init</option>"+
+                                    "<option value='on_error'>on_error</option>"+
+                                    "<option value='on_finally_error'>on_finally_error</option>"+
+                                    "<option value='on_finally'>on_finally</option>"+
+                                    "<option value='on_restart'>on_restart</option>"+
+                                "</select>"+
+                            "</ul>"+
+                            "<ul class='columm'>"+
+                                "<label><i class='fa fa-sliders'></i> Type</label>"+
+                                "<select data-index='"+id+"' data-type='type' style='width: 100%;'>"+
+                                    "<option value='"+type+"' selected>"+type+"</option>"+
+                                    "<option value='scan'>scan</option>"+
+                                    "<option value='scan_error'>scan_error</option>"+
+                                    "<option value='ready'>ready</option>"+
+                                "</select>"+
+                            "</ul>"
+                        mySlots.appendChild(slot);   
+
+                    }
+
+                update();
+                }
+            })();
+
+            $("#addLed").on("click", function(e){ //ADICINAR NOVO LED
+                
+                
+                var led = document.createElement("div");
+                var myLeds = document.getElementById("myLeds");
+                var id = ($( "#myLeds select" ).length)/2;
+                led.className = 'innerCombo triforce';
+                led.innerHTML = 
+                    "<ul class='columm'>"+
+                        "<label><i class='fa fa-sliders'></i> Action</label>"+
+                        "<select data-index='"+id+"' data-type='action' style='width: 100%;'>"+
+                            "<option value='on_init' selected>on_init</option>"+
+                            "<option value='on_error'>on_error</option>"+
+                            "<option value='on_finally_error'>on_finally_error</option>"+
+                            "<option value='on_finally'>on_finally</option>"+
+                            "<option value='on_restart'>on_restart</option>"+
+                        "</select>"+
+                    "</ul>"+
+                    "<ul class='columm'>"+
+                        "<label><i class='fa fa-sliders'></i> Led</label>"+
+                        "<select data-index='"+id+"' data-type='led' style='width: 100%;'>"+
+                            "<option value='led-pronto' selected>led-pronto</option>"+
+                            "<option value='led-test-on'>led-test-on</option>"+
+                            "<option value='led-erro'>led-erro</option>"+
+                        "</select>"+
+                    "</ul>"+
+                    "<ul class='checks'>"+
+                        "<li style='margin-bottom: 4px; display: flex; flex-direction: row;align-items: center;width: auto;list-style: none;'>"+
+                            "<input id='value"+id+"' type='checkbox'  data-index='"+id+"' data-type='value' style='margin: 0;' autocomplete='off'>"+
+                            "<label for='value"+id+"' style='width: 22% !important; padding-left: 5px;user-select: none;'>Value</label>"+
+                        "</li>"+
+                        "<li style='margin-bottom: 4px;'>"+
+                            "<input id='toggled"+id+"' type='checkbox' data-index='"+id+"' data-type='toggled' style='margin: 0;' autocomplete='off'>"+
+                            "<label for='toggled"+id+"' style='width: 22% !important; padding-left: 5px;user-select: none;'>Toggled</label>"+
+                        "</li>"+
+                    "</ul>"+
+                    "<ul class='columm'>"+
+                        "<label style='width: max-content !important;'><i class='icon-tag'></i>Time toggled: </label>"+
+                        "<input type='number' id='time"+id+"' data-index='"+id+"' data-type='time' min='1' style=' width:100px !important '>"+
+                    "</ul>"+
+                    "<ul class='columm'>"+
+                        "<label style='width: max-content !important;'><i class='icon-tag'></i>Freq toggled: </label>"+
+                        "<input type='number' id='freq"+id+"' data-index='"+id+"' data-type='freq' min='1' style=' width:100px !important '>"+
+                    "</ul>"
+
+                myLeds.appendChild(led);    
+                node.leds.push({action: "on_init", led: "led-pronto", value: false, toggled: false, time_toggled: 0, freq_toggled: 0 });
+
+            update();
+
+            });
+
+            $("#removeLed").on("click", function(e){
+                node.leds.pop();
+                $('#myLeds div:last-child').remove();
+            });
+
+            (function (){ //ATUALIZA LISTA DE LEDS
+                if(node.leds.length > 0){
+                    for(le in node.leds){
+
+                        var checked_toggled;
+                        var checked_value;
+                        var required;
+                        node.leds[le].toggled? (checked_toggled = "checked", required = "required"): (checked_toggled = "", required = "");
+                        node.leds[le].value? checked_value = "checked": checked_value = "";
+                        var action = node.leds[le].action;
+                        var led = node.leds[le].led;
+                        var time_toggled = node.leds[le].time_toggled;
+                        var freq_toggled = node.leds[le].freq_toggled;
+                        
+                    
+                        var ledC = document.createElement("div");
+                        var myLeds = document.getElementById("myLeds");
+                        var id = ($( "#myLeds select" ).length)/2;
+                        ledC.className = 'innerCombo triforce';
+                        ledC.innerHTML = 
+                            "<ul class='columm'>"+
+                                "<label><i class='fa fa-sliders'></i> Action</label>"+
+                                "<select data-index='"+id+"' data-type='action' style='width: 100%;'>"+
+                                    "<option value='"+action+"' selected>"+action+"</option>"+
+                                    "<option value='on_init'>on_init</option>"+
+                                    "<option value='on_error'>on_error</option>"+
+                                    "<option value='on_finally_error'>on_finally_error</option>"+
+                                    "<option value='on_finally'>on_finally</option>"+
+                                    "<option value='on_restart'>on_restart</option>"+
+                                "</select>"+
+                            "</ul>"+
+                            "<ul class='columm'>"+
+                                "<label><i class='fa fa-sliders'></i> Led</label>"+
+                                "<select data-index='"+id+"' data-type='led' style='width: 100%;'>"+
+                                    "<option value='"+led+"' selected>"+led+"</option>"+
+                                    "<option value='led-pronto'>led-pronto</option>"+
+                                    "<option value='led-test-on'>led-test-on</option>"+
+                                    "<option value='led-erro'>led-erro</option>"+
+                                "</select>"+
+                            "</ul>"+
+                            "<ul class='checks'>"+
+                                "<li style='margin-bottom: 4px; display: flex; flex-direction: row;align-items: center;width: auto;list-style: none;'>"+
+                                    "<input id='value"+id+"' type='checkbox' "+checked_value+" data-index='"+id+"' data-type='value' style='margin: 0;' autocomplete='off'>"+
+                                    "<label for='value"+id+"' style='width: 22% !important; padding-left: 5px;user-select: none;'>Value</label>"+
+                                "</li>"+
+                                "<li style='margin-bottom: 4px;'>"+
+                                    "<input id='toggled"+id+"' type='checkbox' "+checked_toggled+" data-index='"+id+"' data-type='toggled' style='margin: 0;' autocomplete='off'>"+
+                                    "<label for='toggled"+id+"' style='width: 22% !important; padding-left: 5px;user-select: none;'>Toggled</label>"+
+                                "</li>"+
+                            "</ul>"+
+                            "<ul class='columm'>"+
+                                "<label  style='width: max-content !important;'><i class='icon-tag'></i>Time toggled: </label>"+
+                                "<input type='number' id='time"+id+"' "+required+" data-index='"+id+"' data-type='time' min='1' value='"+time_toggled+"' style=' width:100px !important '>"+
+                            "</ul>"+
+                            "<ul class='columm'>"+
+                                "<label  style='width: max-content !important;'><i class='icon-tag'></i>Freq toggled: </label>"+
+                                "<input type='number' id='freq"+id+"' "+required+" data-index='"+id+"' data-type='freq' min='1' value='"+freq_toggled+"' style=' width:100px !important '>"+
+                            "</ul>"
+
+                        myLeds.appendChild(ledC);    
+
+                    }
+
+                    update();
+                }
+            })();
+		}
+	});	
+</script>
+
+<style>
+    
+	label{ width: 100% !important; margin-bottom: 2px !important; }
+	.columm{ display: flex !important; flex-direction: column !important; }
+	hr { width: 40% !important; float: left !important; }
+	.hr-div-compare{ display: flex !important; justify-content: space-between !important; }
+	.optional{ height: max-content !important; margin-top: 10px !important; }
+	.descript{ text-align: center; }
+	.columm-50{ display: flex !important; flex-direction: column !important; width: 50% !important; float: left !important; }
+    .columm-30{ display: flex !important; flex-direction: column !important; width: 30% !important; float: left !important; }
+    .columm-70{ display: flex !important; flex-direction: column !important; width: 70% !important; float: left !important; }
+    .columm-100{ display: flex !important; flex-direction: column !important; width: 100% !important; float: left !important; }
+    hr { width: 40% !important; float: left !important; }
+    .hr-div-get{ display: flex !important; justify-content: space-between !important; margin-top: 250px !important; }
+    .optional{ height: max-content !important; margin-top: 10px !important; }
+    .descript{ text-align: center; }
+    .descript-div{ max-width: 444px !important; }
+    span.red-ui-typedInput-type-label { width: 250px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .btn-aln{ display: flex !important; flex-direction: row-reverse !important; align-content: center; align-items: flex-end; }
+    #myCallbacks { padding: 12px; background: #e0e0e0; border-radius: 4px; flex: 1; width: 100%; box-sizing: border-box;}
+    .Combo { padding: 12px; background: #e0e0e0; border-radius: 4px; flex: 1; width: 100%; box-sizing: border-box; box-shadow: inset 0px 0px 2px 1px #a2a0a0;}
+    .innerCombo { margin: 6px 0px; box-shadow: 0px 0px 2px 1px #c7c7c7; padding: 10px; }
+    .but{ position: absolute; right: 0%; bottom: -14px; background: #e0e0e0; padding: 8px; border-radius: 4px; cursor: pointer; user-select: none; }
+    .form-row-luck { display: flex; flex-direction: row;  margin-bottom: 12px}
+    .triforce { display: flex; justify-content: space-between; }
+    ul { padding: 0 !important; margin: 0 !important; }
+    ul.checks { width: 75px; display: flex; flex-direction: column; justify-content: center; }
+    ul.checks li { margin-bottom: 4px; display: flex; flex-direction: row; align-items: center; }
+    .container-tester { display:flex; min-width: 620px; width: 100%; flex-direction: column; }
+
+</style>
+
+<script type="text/html" data-template-name="lever">
+    <div class="container-tester">
+        <div class="form-row-luck columm descript-div">
+            <strong class="descript">
+                Instructions of system for JIG.
+            </strong>
+        </div>
+
+        <div style=" position: relative; display:flex;">
+            <div class="form-row-luck columm-70">
+                <label style="width: 50% !important;" for="node-input-name" ><i class="fa fa-tag"></i> Identification Note</label>
+                <input type="text" id="node-input-name" placeholder="Name" style="width: 100%">
+            </div>
+        </div>
+        <div class="hr-div-compare">
+            <hr>Instructions<hr>
+        </div>
+        <div class='columm' style='display: flex;'>
+            <div class="form-row-luck" >
+                <div class='form-row-luck columm' style='margin-bottom: 4px; margin-right: 27px;'>
+                    <label  for="node-input-type_detect"><i class="fa fa-sliders"></i> Type detect</label>
+                    <select id="node-input-type_detect" data-type="detect" style="width: auto;">
+                        <option value="event" selected>Event detect</option>
+                        <option value="reader">Reader detect</option>
+                    </select>
+                </div>
+                <div class='form-row-luck columm' style='margin-bottom: 4px;'>
+                    <label  for="node-input-level_detect"><i class="fa fa-sliders"></i> Level detect</label>
+                    <select id="node-input-level_detect" data-type="detect" style="width: auto;">
+                        <option value="false" selected>Up</option>
+                        <option value="true">Down</option>
+                    </select>
+                </div>
+            </div>
+            <div class='form-row-luck' style='margin-bottom: 4px;'>
+                <input type='checkbox' id='node-input-start_skip'  style='width: 3%;margin: 0;' autocomplete='off'>
+                <label for='node-input-start_skip' style='width: 50% !important; padding-left: 5px;user-select: none;'> Press start button to skip</label>
+            </div>
+            <div class='form-row-luck' style='margin-bottom: 4px;'>
+                <input type='checkbox' id='node-input-stop_return'  style='width: 3%;margin: 0;' autocomplete='off'>
+                <label for='node-input-stop_return' style='width: 50% !important; padding-left: 5px;user-select: none;'>Press stop button to return</label>
+            </div>
+        </div>
+        <div class='columm-100' style='display: flex;'>
+            <div class="form-row-luck columm" style="position: relative; justify-content: center;">
+                <label  for="node-config-input-callbacks"><i class="fa fa-sliders"></i> Callbacks</label>
+                <select id="node-config-input-callbacks">
+                    <option value="0" selected>Create Callback</option>
+                    <option value="1">on_init</option>
+                    <option value="2">on_error</option>
+                    <option value="3">on_finally_error</option> 
+                    <option value="4">on_finally</option>
+                    <option value="5">on_restart</option>
+                </select>
+                <p id="removeCallback" class="but"><i class="fa fa-sliders"></i> Remove</p>
+            </div>
+            <div id="myCallbacks" class="Combo"></div>
+        </div>
+
+        <div class='columm-100' style='display: flex; margin-top: 20px;'>
+            <div class="form-row-luck columm" style="position: relative; justify-content: center;">
+                <label  for="node-config-input-slots"><i class="fa fa-sliders"></i> Slot box setting</label>
+                <p id="addBox" class="but" style="right: 90px;"><i class="fa fa-sliders"></i> Create</p>
+                <p id="removeBox" class="but"><i class="fa fa-sliders"></i> Remove</p>
+            </div>
+            <div id="mySlots" class="Combo"></div>
+        </div>
+
+        <div class='columm-100' style='display: flex; margin-top: 20px;'>
+            <div class="form-row-luck columm" style="position: relative; justify-content: center;">
+                <label for="node-config-input-leds"><i class="fa fa-sliders"></i> Led setting</label>
+                <p id="addLed" class="but" style="right: 90px;"><i class="fa fa-sliders"></i> Create</p>
+                <p id="removeLed" class="but"><i class="fa fa-sliders"></i> Remove</p>
+            </div>
+            <div id="myLeds" class="Combo"></div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="lever">
+  	<p>Instructions of systen for JIG.</p>
+</script>

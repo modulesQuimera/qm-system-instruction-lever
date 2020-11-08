@@ -1,0 +1,25 @@
+{
+  "name": "qm-system-instruction-lever",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lever.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modulesQuimera/qm-system-instruction-lever.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/modulesQuimera/qm-system-instruction-lever/issues"
+  },
+  "homepage": "https://github.com/modulesQuimera/qm-system-instruction-lever#readme",
+  "node-red" : {
+    "nodes": {
+        "lever": "lever.js"
+    }
+  }
+}
