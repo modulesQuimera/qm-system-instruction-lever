@@ -1,6 +1,6 @@
 {
   "name": "qm-system-instruction-lever",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "lever.js",
   "scripts": {

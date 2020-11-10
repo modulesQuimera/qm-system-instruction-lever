@@ -22,6 +22,8 @@ module.exports = function(RED) {
                     leds: []
                 }
             };
+
+            node.level_detect == "false"? node.level_detect = false: node.level_detect = true;
             
             command.payload.attributes.push({ name: "level_detect", value: node.level_detect });
             command.payload.attributes.push({ name: "type_detect", value: node.type_detect });
