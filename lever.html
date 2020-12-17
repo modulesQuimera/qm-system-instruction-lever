@@ -5,7 +5,8 @@
 		defaults: {
             name:{ value: "" },
 			level_detect: { value: false },
-			type_detect: { value: false },
+            type_detect: { value: false },
+            type_level: { value: "manual" },
             start_skip: { value: false },
             stop_return: { value: false },
 
@@ -399,11 +400,18 @@
                         <option value="reader">Reader detect</option>
                     </select>
                 </div>
-                <div class='form-row-luck columm' style='margin-bottom: 4px;'>
+                <div class='form-row-luck columm' style='margin-bottom: 4px; margin-right: 27px;'>
                     <label  for="node-input-level_detect"><i class="fa fa-sliders"></i> Level detect</label>
                     <select id="node-input-level_detect" data-type="detect" style="width: auto;">
                         <option value="false" selected>Up</option>
                         <option value="true">Down</option>
+                    </select>
+                </div>
+                <div class='form-row-luck columm' style='margin-bottom: 4px;'>
+                    <label  for="node-input-type_level"><i class="fa fa-sliders"></i> Type level</label>
+                    <select id="node-input-type_level" data-type="detect" style="width: auto;">
+                        <option value="manual" selected>Manual</option>
+                        <option value="auto">Automático</option>
                     </select>
                 </div>
             </div>

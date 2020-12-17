@@ -6,6 +6,7 @@ module.exports = function(RED) {
         this.stop_return = config.stop_return;
         this.level_detect = config.level_detect;
         this.type_detect = config.type_detect;
+        this.type_level = config.type_level;
         
 		var node = this;
 		
@@ -27,6 +28,7 @@ module.exports = function(RED) {
             
             command.payload.attributes.push({ name: "level_detect", value: node.level_detect });
             command.payload.attributes.push({ name: "type_detect", value: node.type_detect });
+            command.payload.attributes.push({ name: "type_level", value: node.type_level });
             command.payload.attributes.push({ name: "start_skip", value: node.start_skip });
             command.payload.attributes.push({ name: "stop_return", value: node.stop_return });
 
